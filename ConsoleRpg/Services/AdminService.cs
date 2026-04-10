@@ -35,6 +35,10 @@ public class AdminService
 {
     private readonly GameContext _context;
 
+    // Sentinel used in Spectre SelectionPrompts so the player can back out
+    // without being forced to pick an item. Same pattern as GameEngine.
+    private const string CancelLabel = "(Cancel)";
+
     public AdminService(GameContext context)
     {
         _context = context;
@@ -155,7 +159,8 @@ public class AdminService
         var pick = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[cyan]Which room?[/]")
-                .AddChoices(rooms.Select(r => r.Name)));
+                .AddChoices(rooms.Select(r => r.Name).Append(CancelLabel)));
+        if (pick == CancelLabel) return ServiceResult.Ok("Cancelled.");
 
         var room = rooms.First(r => r.Name == pick);
 
@@ -255,7 +260,8 @@ public class AdminService
         var playerPick = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[cyan]Which character?[/]")
-                .AddChoices(players.Select(p => p.Name)));
+                .AddChoices(players.Select(p => p.Name).Append(CancelLabel)));
+        if (playerPick == CancelLabel) return ServiceResult.Ok("Cancelled.");
         var player = players.First(p => p.Name == playerPick);
 
         var abilities = _context.Abilities.OrderBy(a => a.Name).ToList();
@@ -265,7 +271,8 @@ public class AdminService
         var abilityPick = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title($"[cyan]Which ability to teach {Markup.Escape(player.Name)}?[/]")
-                .AddChoices(abilities.Select(a => a.Name)));
+                .AddChoices(abilities.Select(a => a.Name).Append(CancelLabel)));
+        if (abilityPick == CancelLabel) return ServiceResult.Ok("Cancelled.");
         var ability = abilities.First(a => a.Name == abilityPick);
 
         if (player.Abilities.Any(a => a.Id == ability.Id))
@@ -290,7 +297,8 @@ public class AdminService
         var pick = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[cyan]Which character?[/]")
-                .AddChoices(players.Select(p => p.Name)));
+                .AddChoices(players.Select(p => p.Name).Append(CancelLabel)));
+        if (pick == CancelLabel) return ServiceResult.Ok("Cancelled.");
         var player = players.First(p => p.Name == pick);
 
         if (!player.Abilities.Any())

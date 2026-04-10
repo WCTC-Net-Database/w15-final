@@ -33,9 +33,44 @@ public class PlayerService
     // ============================================================
 
     /// <summary>
+    /// Finds the door (if any) between the player's current room and a
+    /// target room. Returns null when there is no door (just an open passage)
+    /// or when the target direction has no exit at all.
+    ///
+    /// Used by the GameEngine so the UI layer can detect a door BEFORE
+    /// calling Move() and prompt for keys if needed.
+    /// </summary>
+    public Door? FindDoorBetween(int fromRoomId, int? toRoomId)
+    {
+        if (toRoomId == null) return null;
+        return _context.Doors.FirstOrDefault(d =>
+            (d.RoomAId == fromRoomId && d.RoomBId == toRoomId.Value) ||
+            (d.RoomAId == toRoomId.Value && d.RoomBId == fromRoomId));
+    }
+
+    /// <summary>
+    /// Attempts to unlock a door using a key from the player's inventory.
+    /// Thin wrapper around Player.TryUnlock that persists the change and
+    /// returns a ServiceResult for the UI layer.
+    /// </summary>
+    public ServiceResult TryUnlockDoor(Player player, Door door, KeyItem key)
+    {
+        if (player.TryUnlock(door, key))
+        {
+            _context.SaveChanges();
+            return ServiceResult.Ok($"You unlock the {door.Name}.");
+        }
+        return ServiceResult.Fail($"The key does not fit the {door.Name}.");
+    }
+
+    /// <summary>
     /// Moves the player to the target room in the given direction.
     /// Handles door traversal: if a door sits between the rooms, lock/trap
     /// checks fire before the move happens.
+    ///
+    /// If a locked door blocks the way the caller should resolve the lock
+    /// BEFORE calling Move() - see FindDoorBetween + TryUnlockDoor above.
+    /// This method only handles the happy path and unrecoverable blocks.
     /// </summary>
     public ServiceResult<Room> Move(Player player, Room currentRoom, int? targetRoomId, string direction)
     {
@@ -57,10 +92,9 @@ public class PlayerService
             return ServiceResult<Room>.Fail("The path leads nowhere.");
 
         // Door check: is there a door between current and target? If so,
-        // apply lock + trap mechanics before allowing the move.
-        var door = _context.Doors.FirstOrDefault(d =>
-            (d.RoomAId == currentRoom.Id && d.RoomBId == target.Id) ||
-            (d.RoomAId == target.Id && d.RoomBId == currentRoom.Id));
+        // apply secret-visibility + trap mechanics. Lock handling happens
+        // BEFORE this method is called (GameEngine prompts for a key).
+        var door = FindDoorBetween(currentRoom.Id, target.Id);
 
         if (door != null)
         {
@@ -68,7 +102,7 @@ public class PlayerService
                 return ServiceResult<Room>.Fail("You can't go that way.");
 
             if (door.IsLocked)
-                return ServiceResult<Room>.Fail($"The {door.Name} is locked. Find a key or lockpick.");
+                return ServiceResult<Room>.Fail($"The {door.Name} is locked.");
 
             if (!player.PassThroughDoor(door))
                 return ServiceResult<Room>.Fail("The door blocks your path.");
@@ -157,6 +191,13 @@ public class PlayerService
         player.Equip(item);
         _context.SaveChanges();
         return ServiceResult.Ok($"Equipped {item.Name}.");
+    }
+
+    public ServiceResult Unequip(Player player, Item item)
+    {
+        player.Unequip(item);
+        _context.SaveChanges();
+        return ServiceResult.Ok($"Unequipped {item.Name}.");
     }
 
     // ============================================================

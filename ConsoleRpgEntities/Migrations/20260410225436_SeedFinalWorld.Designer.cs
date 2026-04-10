@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ConsoleRpgEntities.Migrations
 {
     [DbContext(typeof(GameContext))]
-    [Migration("20260410220107_SeedFinalWorld")]
+    [Migration("20260410225436_SeedFinalWorld")]
     partial class SeedFinalWorld
     {
         /// <inheritdoc />
@@ -332,6 +332,9 @@ namespace ConsoleRpgEntities.Migrations
                     b.Property<bool>("IsTrapped")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("LocationRoomId")
+                        .HasColumnType("int");
+
                     b.Property<string>("RequiredKeyId")
                         .HasColumnType("nvarchar(max)");
 
@@ -340,6 +343,8 @@ namespace ConsoleRpgEntities.Migrations
 
                     b.Property<bool>("TrapDisarmed")
                         .HasColumnType("bit");
+
+                    b.HasIndex("LocationRoomId");
 
                     b.HasDiscriminator().HasValue("Chest");
                 });
@@ -553,6 +558,16 @@ namespace ConsoleRpgEntities.Migrations
                     b.Navigation("RoomA");
 
                     b.Navigation("RoomB");
+                });
+
+            modelBuilder.Entity("ConsoleRpgEntities.Models.Containers.Chest", b =>
+                {
+                    b.HasOne("ConsoleRpgEntities.Models.Containers.Room", "LocationRoom")
+                        .WithMany()
+                        .HasForeignKey("LocationRoomId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("LocationRoom");
                 });
 
             modelBuilder.Entity("ConsoleRpgEntities.Models.Containers.Room", b =>

@@ -4,6 +4,7 @@ using ConsoleRpgEntities.Data;
 using ConsoleRpgEntities.Models.Characters;
 using ConsoleRpgEntities.Models.Characters.Monsters;
 using ConsoleRpgEntities.Models.Containers;
+using ConsoleRpgEntities.Models.World;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
@@ -48,8 +49,14 @@ public class GameEngine
     private Player? _player;
     private List<Monster> _monsters = new();
     private List<Room> _rooms = new();
+    private List<Chest> _chests = new();
 
     private GameMode _mode = GameMode.Exploration;
+    private bool _playerDead;
+
+    // A sentinel value used by sub-prompts so the player can back out
+    // of a SelectionPrompt without being forced to pick an item.
+    private const string CancelLabel = "(Cancel)";
 
     public GameEngine(
         GameContext context,
@@ -84,11 +91,19 @@ public class GameEngine
         AnsiConsole.MarkupLine("[dim]Press any key to begin...[/]");
         Console.ReadKey(true);
 
-        // Main loop - runs until the player quits.
+        // Main loop - runs until the player quits or dies.
         while (true)
         {
             // Reload cached data between turns so we see DB changes.
             ReloadGameState();
+
+            // Death check - if the player died last turn, show a game-over
+            // screen and exit the loop.
+            if (_playerDead || (_player?.Health ?? 0) <= 0)
+            {
+                ShowGameOver();
+                return;
+            }
 
             if (_mode == GameMode.Exploration)
             {
@@ -99,6 +114,23 @@ public class GameEngine
                 if (AdminTurn() == TurnResult.Quit) return;
             }
         }
+    }
+
+    /// <summary>
+    /// Renders a simple Spectre game-over screen when the player's HP hits zero.
+    /// Students can extend this - add a respawn flow, a retry prompt, a final
+    /// score display, etc.
+    /// </summary>
+    private void ShowGameOver()
+    {
+        AnsiConsole.Clear();
+        AnsiConsole.Write(new FigletText("Game Over").Centered().Color(Color.Red));
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine($"[red]{Markup.Escape(_player?.Name ?? "The adventurer")} has fallen in battle.[/]");
+        AnsiConsole.MarkupLine("[dim]Run 'dotnet ef database update 0' and 'dotnet ef database update' to start fresh.[/]");
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[dim]Press any key to exit...[/]");
+        Console.ReadKey(true);
     }
 
     // ================================================================
@@ -126,6 +158,13 @@ public class GameEngine
             .Include(r => r.EastRoom)
             .Include(r => r.WestRoom)
             .ToList();
+
+        // Chests placed in the world (via Chest.LocationRoomId from W15).
+        _chests = _context.Containers
+            .OfType<Chest>()
+            .Include(c => c.Items)
+            .Where(c => c.LocationRoomId.HasValue)
+            .ToList();
     }
 
     /// <summary>
@@ -149,7 +188,7 @@ public class GameEngine
     {
         if (_player == null) return TurnResult.Quit;
 
-        var choice = _explorationUI.RenderAndPrompt(_player, _player.CurrentRoom, _rooms, _monsters);
+        var choice = _explorationUI.RenderAndPrompt(_player, _player.CurrentRoom, _rooms, _monsters, _chests);
 
         switch (choice)
         {
@@ -161,7 +200,10 @@ public class GameEngine
             case "Attack Monster": HandleAttack(); break;
             case "Pick Up Item":   HandlePickUp(); break;
             case "Drop Item":      HandleDrop(); break;
+            case "Equip Item":     HandleEquip(); break;
+            case "Unequip Item":   HandleUnequip(); break;
             case "Use Consumable": HandleUseConsumable(); break;
+            case "Open Chest":     HandleChest(); break;
             case "Inspect Room":
                 var r = _playerService.InspectRoom(_player);
                 _explorationUI.ShowMessage(r.DetailedOutput, r.Success ? ConsoleColor.Green : ConsoleColor.Yellow);
@@ -182,8 +224,59 @@ public class GameEngine
     private void HandleMove(int? targetId, string direction)
     {
         if (_player?.CurrentRoom == null) return;
+
+        // Check for a door between here and the target. If the door is locked,
+        // give the player a chance to unlock it BEFORE calling Move.
+        var door = _playerService.FindDoorBetween(_player.CurrentRoom.Id, targetId);
+        if (door != null && door.IsLocked)
+        {
+            if (!PromptUnlockDoor(door))
+            {
+                // Player cancelled or failed to unlock; don't attempt the move
+                return;
+            }
+        }
+
         var result = _playerService.Move(_player, _player.CurrentRoom, targetId, direction);
         _explorationUI.ShowMessage(result.DetailedOutput, result.Success ? ConsoleColor.Green : ConsoleColor.Red);
+    }
+
+    /// <summary>
+    /// Prompts the player to pick a key from their inventory and attempts
+    /// to unlock the given door. Returns true if the door is now unlocked
+    /// (whether freshly or because it was already unlocked), false if the
+    /// player cancelled or the unlock attempt failed.
+    /// </summary>
+    private bool PromptUnlockDoor(Door door)
+    {
+        if (_player?.Inventory == null) return false;
+
+        var keys = _player.Inventory.Items.OfType<KeyItem>().ToList();
+        if (!keys.Any())
+        {
+            _explorationUI.ShowMessage($"The {door.Name} is locked and you have no keys or lockpicks.", ConsoleColor.Red);
+            return false;
+        }
+
+        var labels = keys
+            .Select(k => k.KeyId == null
+                ? $"{k.Name} (lockpick)"
+                : $"{k.Name} (key: {k.KeyId})")
+            .ToList();
+
+        var pick = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[cyan]The {Markup.Escape(door.Name)} is locked. Try which key?[/]")
+                .AddChoices(labels.Append(CancelLabel)));
+
+        if (pick == CancelLabel) return false;
+
+        var chosenIndex = labels.IndexOf(pick);
+        var key = keys[chosenIndex];
+
+        var result = _playerService.TryUnlockDoor(_player, door, key);
+        _explorationUI.ShowMessage(result.DetailedOutput, result.Success ? ConsoleColor.Green : ConsoleColor.Red);
+        return result.Success;
     }
 
     private void HandleAttack()
@@ -196,15 +289,32 @@ public class GameEngine
             return;
         }
 
-        var target = monstersHere.Count == 1
-            ? monstersHere[0]
-            : monstersHere.First(m => m.Name == AnsiConsole.Prompt(
+        // Single target: no prompt needed. Multiple: let the player pick,
+        // and always offer a Cancel escape hatch so they can back out.
+        Monster target;
+        if (monstersHere.Count == 1)
+        {
+            target = monstersHere[0];
+        }
+        else
+        {
+            var pick = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("[cyan]Attack which monster?[/]")
-                    .AddChoices(monstersHere.Select(x => x.Name))));
+                    .AddChoices(monstersHere.Select(x => x.Name).Append(CancelLabel)));
+            if (pick == CancelLabel) return;
+            target = monstersHere.First(m => m.Name == pick);
+        }
 
         var result = _playerService.AttackMonster(_player, target);
         _explorationUI.ShowMessage(result.DetailedOutput, ConsoleColor.Red);
+
+        // Check for player death from the counterattack
+        if (_player.Health <= 0)
+        {
+            _playerDead = true;
+            return;
+        }
 
         if (target.Health <= 0 && !target.IsLooted && target.Loot != null && target.Loot.Items.Any())
         {
@@ -229,7 +339,8 @@ public class GameEngine
         var pick = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[cyan]Pick up which item?[/]")
-                .AddChoices(floorItems.Select(i => i.Name)));
+                .AddChoices(floorItems.Select(i => i.Name).Append(CancelLabel)));
+        if (pick == CancelLabel) return;
         var item = floorItems.First(i => i.Name == pick);
 
         var result = _playerService.PickUpFromFloor(_player, item);
@@ -249,10 +360,55 @@ public class GameEngine
         var pick = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[cyan]Drop which item?[/]")
-                .AddChoices(bagItems.Select(i => i.Name)));
+                .AddChoices(bagItems.Select(i => i.Name).Append(CancelLabel)));
+        if (pick == CancelLabel) return;
         var item = bagItems.First(i => i.Name == pick);
 
         var result = _playerService.Drop(_player, item);
+        _explorationUI.ShowMessage(result.DetailedOutput, ConsoleColor.Green);
+    }
+
+    private void HandleEquip()
+    {
+        if (_player?.Inventory == null) return;
+        var equippable = _player.Inventory.Items
+            .Where(i => i is Weapon || i is Armor)
+            .ToList();
+        if (!equippable.Any())
+        {
+            _explorationUI.ShowMessage("Nothing in your backpack can be equipped.", ConsoleColor.Yellow);
+            return;
+        }
+
+        var pick = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]Equip which item?[/]")
+                .AddChoices(equippable.Select(i => $"{i.Name} [{i.ItemType}]").Append(CancelLabel)));
+        if (pick == CancelLabel) return;
+
+        var chosen = equippable.First(i => $"{i.Name} [{i.ItemType}]" == pick);
+        var result = _playerService.Equip(_player, chosen);
+        _explorationUI.ShowMessage(result.DetailedOutput, ConsoleColor.Green);
+    }
+
+    private void HandleUnequip()
+    {
+        if (_player?.Equipment == null) return;
+        var equipped = _player.Equipment.Items.ToList();
+        if (!equipped.Any())
+        {
+            _explorationUI.ShowMessage("Nothing is currently equipped.", ConsoleColor.Yellow);
+            return;
+        }
+
+        var pick = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]Unequip which item?[/]")
+                .AddChoices(equipped.Select(i => $"{i.Name} [{i.ItemType}]").Append(CancelLabel)));
+        if (pick == CancelLabel) return;
+
+        var chosen = equipped.First(i => $"{i.Name} [{i.ItemType}]" == pick);
+        var result = _playerService.Unequip(_player, chosen);
         _explorationUI.ShowMessage(result.DetailedOutput, ConsoleColor.Green);
     }
 
@@ -266,14 +422,140 @@ public class GameEngine
             return;
         }
 
+        var labels = consumables.Select(c => $"{c.Name} ({c.EffectType} {c.EffectAmount})").ToList();
         var pick = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[cyan]Use which consumable?[/]")
-                .AddChoices(consumables.Select(c => $"{c.Name} ({c.EffectType} {c.EffectAmount})")));
+                .AddChoices(labels.Append(CancelLabel)));
+        if (pick == CancelLabel) return;
         var chosen = consumables.First(c => $"{c.Name} ({c.EffectType} {c.EffectAmount})" == pick);
 
         var result = _playerService.UseConsumable(_player, chosen);
         _explorationUI.ShowMessage(result.DetailedOutput, ConsoleColor.Green);
+    }
+
+    // ================================================================
+    // CHEST INTERACTION
+    // ================================================================
+    // Uses the W13 chest mechanics (Player.OpenChest / TryUnlock / LootChest)
+    // combined with the W15 Chest.LocationRoomId so chests in the current
+    // room appear as a menu option.
+    private void HandleChest()
+    {
+        if (_player?.CurrentRoom == null) return;
+
+        var chestsHere = _chests.Where(c => c.LocationRoomId == _player.CurrentRoom.Id).ToList();
+        if (!chestsHere.Any())
+        {
+            _explorationUI.ShowMessage("There are no chests here.", ConsoleColor.Yellow);
+            return;
+        }
+
+        Chest chest;
+        if (chestsHere.Count == 1)
+        {
+            chest = chestsHere[0];
+        }
+        else
+        {
+            var labels = chestsHere.Select(c =>
+            {
+                var status = c.IsLocked ? "[LOCKED]" : c.Items.Any() ? "[OPEN]" : "[EMPTY]";
+                return $"{c.Description} {status}";
+            }).ToList();
+            var pick = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[cyan]Which chest?[/]")
+                    .AddChoices(labels.Append(CancelLabel)));
+            if (pick == CancelLabel) return;
+            chest = chestsHere[labels.IndexOf(pick)];
+        }
+
+        // If locked, offer to unlock before opening
+        if (chest.IsLocked)
+        {
+            if (!PromptUnlockChest(chest)) return;
+        }
+
+        // Try to open - handles trap firing
+        var openResult = _player.OpenChest(chest);
+        _context.SaveChanges();
+
+        switch (openResult)
+        {
+            case Player.OpenResult.Trapped:
+                _explorationUI.ShowMessage(
+                    $"A trap springs! You take {chest.TrapDamage} damage. The chest creaks open.",
+                    ConsoleColor.Red);
+                break;
+            case Player.OpenResult.Opened:
+            case Player.OpenResult.AlreadyOpen:
+                // fall through to loot prompt
+                break;
+            case Player.OpenResult.Locked:
+                // Shouldn't happen - we unlocked above
+                _explorationUI.ShowMessage($"The {chest.Description} is still locked.", ConsoleColor.Red);
+                return;
+        }
+
+        // Now the chest is open - offer to take items
+        if (!chest.Items.Any())
+        {
+            _explorationUI.ShowMessage("The chest is empty.", ConsoleColor.Yellow);
+            return;
+        }
+
+        var itemList = string.Join(", ", chest.Items.Select(i => i.Name));
+        if (AnsiConsole.Confirm($"Chest contains: {itemList}. Take all?"))
+        {
+            _player.LootChest(chest);
+            _context.SaveChanges();
+            _explorationUI.ShowMessage("You loot the chest.", ConsoleColor.Green);
+        }
+    }
+
+    /// <summary>
+    /// Prompts the player to try a key from inventory on a locked chest.
+    /// Same pattern as PromptUnlockDoor - both call Player.TryUnlock via
+    /// the ILockable interface from W13.
+    /// </summary>
+    private bool PromptUnlockChest(Chest chest)
+    {
+        if (_player?.Inventory == null) return false;
+
+        var keys = _player.Inventory.Items.OfType<KeyItem>().ToList();
+        if (!keys.Any())
+        {
+            _explorationUI.ShowMessage($"The {chest.Description} is locked and you have no keys.", ConsoleColor.Red);
+            return false;
+        }
+
+        var labels = keys
+            .Select(k => k.KeyId == null
+                ? $"{k.Name} (lockpick)"
+                : $"{k.Name} (key: {k.KeyId})")
+            .ToList();
+
+        var pick = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[cyan]The chest is locked. Try which key?[/]")
+                .AddChoices(labels.Append(CancelLabel)));
+
+        if (pick == CancelLabel) return false;
+
+        var key = keys[labels.IndexOf(pick)];
+        var success = _player.TryUnlock(chest, key);
+        _context.SaveChanges();
+
+        if (success)
+        {
+            _explorationUI.ShowMessage($"You unlock the {chest.Description}.", ConsoleColor.Green);
+        }
+        else
+        {
+            _explorationUI.ShowMessage($"The {key.Name} doesn't fit.", ConsoleColor.Red);
+        }
+        return success;
     }
 
     // ================================================================

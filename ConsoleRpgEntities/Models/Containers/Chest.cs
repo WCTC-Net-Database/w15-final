@@ -40,4 +40,13 @@ public class Chest : Container, ILockable
     /// Zero means the chest has no damage trap.
     /// </summary>
     public int TrapDamage { get; set; }
+
+    // ============================================================
+    // LOCATION (new in Week 15)
+    // ============================================================
+    // Chests now live in a specific room. Nullable so existing seed data
+    // from earlier weeks continues to work - unplaced chests are treated
+    // as "nowhere" by the UI and don't show up in the exploration view.
+    public int? LocationRoomId { get; set; }
+    public virtual Room? LocationRoom { get; set; }
 }

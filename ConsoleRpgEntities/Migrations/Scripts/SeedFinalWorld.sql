@@ -252,6 +252,58 @@ INSERT INTO Items (Name, Description, ItemType, Weight, Value, ContainerId, KeyI
 VALUES ('Bent Hairpin', 'A thin metal tool for impromptu lockpicking.', 'KeyItem', 0.10, 5, 1, NULL);
 
 -- ----------------------------------------------------------------
--- STEP 7: Teleport the player to Town Square
+-- STEP 7: Place the W13 chests in specific rooms (new in W15)
+-- ----------------------------------------------------------------
+-- W13 seeded 4 chests (Container Ids 3-6) without location data. Now that
+-- the Chest entity has a LocationRoomId, we assign each chest to a sensible
+-- room in the W15 world layout.
+--
+-- Chest 3 (Weathered wooden chest, no lock)           -> Ancient Library
+-- Chest 4 (Iron-banded chest, locked, pickable)       -> Training Grounds
+-- Chest 5 (Ornate chest, requires "dungeon-main" key) -> Hidden Shrine
+-- Chest 6 (Dusty chest, trapped)                      -> Trapped Vault
+-- ----------------------------------------------------------------
+UPDATE Containers SET LocationRoomId = 14 WHERE Id = 3; -- Ancient Library
+UPDATE Containers SET LocationRoomId = 15 WHERE Id = 4; -- Training Grounds
+UPDATE Containers SET LocationRoomId = 12 WHERE Id = 5; -- Hidden Shrine
+UPDATE Containers SET LocationRoomId = 11 WHERE Id = 6; -- Trapped Vault
+
+-- ----------------------------------------------------------------
+-- STEP 8: Add a couple of fresh W15 chests for variety
+-- ----------------------------------------------------------------
+-- Container Ids 20-21: two new chests placed in town for low-risk loot.
+SET IDENTITY_INSERT Containers ON;
+
+INSERT INTO Containers
+    (Id, ContainerType, Description, IsLocked, IsTrapped, IsPickable, RequiredKeyId, TrapDamage, TrapDisarmed, LocationRoomId)
+VALUES
+    -- Id 20: An easy-to-spot merchant's lockbox in Town Square.
+    -- Unlocked so brand-new players can immediately practice Open -> Take.
+    (20, 'Chest',
+        'A small merchant lockbox left on a stool.',
+        0, 0, 1, NULL, 0, 0, 8),
+
+    -- Id 21: A librarian's curio box in the Ancient Library. Locked,
+    -- pickable, no specific key required - the starter hairpin works.
+    (21, 'Chest',
+        'A librarian''s curio box bound in brass.',
+        1, 0, 1, NULL, 0, 0, 14);
+
+SET IDENTITY_INSERT Containers OFF;
+
+INSERT INTO Items (Name, Description, ItemType, Weight, Value, ContainerId, EffectType, EffectAmount, Uses)
+VALUES ('Honeybread', 'A sticky slice of honeyed bread.', 'Consumable', 0.30, 8, 20, 'Heal', 10, 1);
+
+INSERT INTO Items (Name, Description, ItemType, Weight, Value, ContainerId, EffectType, EffectAmount, Uses)
+VALUES ('Bottled Courage', 'A sip brings a surge of confidence.', 'Consumable', 0.40, 30, 20, 'Buff', 5, 1);
+
+INSERT INTO Items (Name, Description, ItemType, Weight, Value, ContainerId, Defense, Slot)
+VALUES ('Scholar''s Circlet', 'A thin silver band worn by scholars.', 'Armor', 0.30, 120, 21, 2, 'Head');
+
+INSERT INTO Items (Name, Description, ItemType, Weight, Value, ContainerId, KeyId)
+VALUES ('Library Note', 'A scrap mentioning a hidden shrine south of the maze.', 'KeyItem', 0.05, 0, 21, NULL);
+
+-- ----------------------------------------------------------------
+-- STEP 9: Teleport the player to Town Square
 -- ----------------------------------------------------------------
 UPDATE Players SET CurrentRoomId = 8 WHERE Id = 1;

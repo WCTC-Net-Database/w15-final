@@ -134,6 +134,18 @@ public class GameContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         // ============================================
+        // Chest -> Room (NEW in Week 15)
+        // ============================================
+        // Chests can be placed in a specific room so they appear in the
+        // exploration view. The FK is nullable so chests seeded before
+        // this feature existed (W13) continue to work unchanged.
+        modelBuilder.Entity<Chest>()
+            .HasOne(c => c.LocationRoom)
+            .WithMany()
+            .HasForeignKey(c => c.LocationRoomId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ============================================
         // Room self-referencing navigation (NEW in Week 14)
         // ============================================
         // Each room points to at most one other Room in each cardinal direction.

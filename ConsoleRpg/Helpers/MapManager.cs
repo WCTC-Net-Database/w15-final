@@ -55,7 +55,10 @@ public class MapManager
     /// monsters in the room, and items on the floor. Used alongside the
     /// map panel in the split-screen exploration view.
     /// </summary>
-    public Panel BuildRoomDetailsPanel(Room? room, IEnumerable<Monster>? monsters = null)
+    public Panel BuildRoomDetailsPanel(
+        Room? room,
+        IEnumerable<Monster>? monsters = null,
+        IEnumerable<Chest>? chests = null)
     {
         if (room == null)
         {
@@ -83,6 +86,22 @@ public class MapManager
         if (monstersHere.Any())
         {
             sb.AppendLine($"[red]Monsters:[/] {string.Join(", ", monstersHere.Select(m => $"{EscapeMarkup(m.Name)} (HP:{m.Health})"))}");
+        }
+
+        // Chests in this room (W15 adds Chest.LocationRoomId for placement)
+        var chestsHere = (chests ?? Array.Empty<Chest>())
+            .Where(c => c.LocationRoomId == room.Id)
+            .ToList();
+        if (chestsHere.Any())
+        {
+            var labels = chestsHere.Select(c =>
+            {
+                var status = c.IsLocked ? "[red]LOCKED[/]"
+                           : c.Items.Any() ? "[green]OPEN[/]"
+                           : "[dim]EMPTY[/]";
+                return $"{EscapeMarkup(c.Description)} {status}";
+            });
+            sb.AppendLine($"[yellow]Chests:[/] {string.Join(", ", labels)}");
         }
 
         // Items on the floor
@@ -115,6 +134,54 @@ public class MapManager
         sb.AppendLine($"[dim]Bag:[/] {bagWeight}/{bagMax} lbs");
 
         return Panel(new Markup(sb.ToString().TrimEnd()), "Character");
+    }
+
+    /// <summary>
+    /// Builds an inventory summary panel showing equipped items and backpack
+    /// contents at a glance. Designed to fit in the split-screen exploration
+    /// layout as a third right-column panel.
+    /// </summary>
+    public Panel BuildInventoryPanel(ConsoleRpgEntities.Models.Characters.Player? player)
+    {
+        if (player == null)
+        {
+            return Panel(new Markup("[red]No player.[/]"), "Inventory");
+        }
+
+        var sb = new StringBuilder();
+
+        // Equipped first (short, usually just weapon + armor)
+        sb.Append("[yellow]Equipped:[/] ");
+        var equipped = player.Equipment?.Items.ToList() ?? new();
+        if (equipped.Any())
+        {
+            sb.AppendLine(string.Join(", ", equipped.Select(i => EscapeMarkup(i.Name))));
+        }
+        else
+        {
+            sb.AppendLine("[dim](nothing)[/]");
+        }
+
+        // Backpack contents
+        var bag = player.Inventory?.Items.ToList() ?? new();
+        if (bag.Any())
+        {
+            sb.AppendLine("[yellow]Backpack:[/]");
+            foreach (var item in bag.Take(8))
+            {
+                sb.AppendLine($"  [dim]-[/] {EscapeMarkup(item.Name)}");
+            }
+            if (bag.Count > 8)
+            {
+                sb.AppendLine($"  [dim]... and {bag.Count - 8} more[/]");
+            }
+        }
+        else
+        {
+            sb.AppendLine("[dim]Backpack is empty.[/]");
+        }
+
+        return Panel(new Markup(sb.ToString().TrimEnd()), "Inventory");
     }
 
     // ====================================================================

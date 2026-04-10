@@ -35,7 +35,8 @@ public class ExplorationUI
         Player player,
         Room? currentRoom,
         IEnumerable<Room> allRooms,
-        IEnumerable<Monster> allMonsters)
+        IEnumerable<Monster> allMonsters,
+        IEnumerable<Chest> allChests)
     {
         AnsiConsole.Clear();
 
@@ -49,24 +50,25 @@ public class ExplorationUI
             .AddColumn();
 
         var mapPanel = _mapManager.BuildMapPanel(allRooms, currentRoom, allMonsters);
-        var roomPanel = _mapManager.BuildRoomDetailsPanel(currentRoom, allMonsters);
+        var roomPanel = _mapManager.BuildRoomDetailsPanel(currentRoom, allMonsters, allChests);
         var playerPanel = _mapManager.BuildPlayerPanel(player);
+        var inventoryPanel = _mapManager.BuildInventoryPanel(player);
 
-        // Stack the room details and player panels in the right column.
-        var rightColumn = new Rows(roomPanel, playerPanel);
+        // Stack room details, player stats, and inventory in the right column.
+        var rightColumn = new Rows(roomPanel, playerPanel, inventoryPanel);
 
         grid.AddRow(mapPanel, rightColumn);
         AnsiConsole.Write(grid);
         AnsiConsole.WriteLine();
 
         // Build the list of available actions based on current context.
-        var actions = BuildActionList(currentRoom, allMonsters);
+        var actions = BuildActionList(player, currentRoom, allMonsters, allChests);
 
         // Use Spectre's built-in SelectionPrompt for a nice arrow-key menu.
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[cyan]What do you do?[/]")
-                .PageSize(12)
+                .PageSize(14)
                 .AddChoices(actions));
 
         return choice;
@@ -87,7 +89,11 @@ public class ExplorationUI
     /// <summary>
     /// Build the context-sensitive action list shown in the SelectionPrompt.
     /// </summary>
-    private static List<string> BuildActionList(Room? currentRoom, IEnumerable<Monster> allMonsters)
+    private static List<string> BuildActionList(
+        Player player,
+        Room? currentRoom,
+        IEnumerable<Monster> allMonsters,
+        IEnumerable<Chest> allChests)
     {
         var actions = new List<string>();
 
@@ -102,12 +108,23 @@ public class ExplorationUI
         {
             var monstersHere = allMonsters.Any(m => m.CurrentRoomId == currentRoom.Id && m.Health > 0);
             if (monstersHere) actions.Add("Attack Monster");
+
             if (currentRoom.Items.Any()) actions.Add("Pick Up Item");
+
+            var chestsHere = allChests.Any(c => c.LocationRoomId == currentRoom.Id);
+            if (chestsHere) actions.Add("Open Chest");
         }
 
-        // Inventory / Drop
-        actions.Add("Drop Item");
-        actions.Add("Use Consumable");
+        // Inventory actions - only show if there's something to act on.
+        var hasBagItems = player.Inventory?.Items.Any() ?? false;
+        var hasEquippable = player.Inventory?.Items.Any(i => i is Weapon || i is Armor) ?? false;
+        var hasConsumable = player.Inventory?.Items.OfType<Consumable>().Any() ?? false;
+        var hasEquipped = player.Equipment?.Items.Any() ?? false;
+
+        if (hasEquippable) actions.Add("Equip Item");
+        if (hasEquipped) actions.Add("Unequip Item");
+        if (hasBagItems) actions.Add("Drop Item");
+        if (hasConsumable) actions.Add("Use Consumable");
 
         // System actions
         actions.Add("Inspect Room");

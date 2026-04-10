@@ -1,6 +1,11 @@
 -- Rollback for SeedFinalWorld - removes everything the up script added
 -- in reverse order to respect foreign key constraints.
 
+-- 0. Clear chest location references and drop new W15 chests
+UPDATE Containers SET LocationRoomId = NULL WHERE Id IN (3, 4, 5, 6);
+DELETE FROM Items WHERE ContainerId IN (20, 21);
+DELETE FROM Containers WHERE Id IN (20, 21);
+
 -- 1. Clear player / existing monster location references that point at W15 rooms
 UPDATE Players SET CurrentRoomId = NULL WHERE Id = 1;
 UPDATE Monsters SET CurrentRoomId = NULL WHERE Id = 1;
