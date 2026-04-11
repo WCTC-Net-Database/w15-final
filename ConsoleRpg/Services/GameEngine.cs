@@ -188,7 +188,14 @@ public class GameEngine
     {
         if (_player == null) return TurnResult.Quit;
 
-        var choice = _explorationUI.RenderAndPrompt(_player, _player.CurrentRoom, _rooms, _monsters, _chests);
+        // Filter the rooms list so the map only shows what the player has
+        // discovered. Rooms behind undiscovered secret doors stay hidden
+        // until Inspect Room reveals them - the reveal moment is the whole
+        // point of secret doors.
+        var visibleIds = _playerService.GetVisibleRoomIds(_player.CurrentRoomId);
+        var visibleRooms = _rooms.Where(r => visibleIds.Contains(r.Id)).ToList();
+
+        var choice = _explorationUI.RenderAndPrompt(_player, _player.CurrentRoom, visibleRooms, _monsters, _chests);
 
         switch (choice)
         {
@@ -204,6 +211,7 @@ public class GameEngine
             case "Unequip Item":   HandleUnequip(); break;
             case "Use Consumable": HandleUseConsumable(); break;
             case "Open Chest":     HandleChest(); break;
+            case "View Inventory": HandleViewInventory(); break;
             case "Inspect Room":
                 var r = _playerService.InspectRoom(_player);
                 _explorationUI.ShowMessage(r.DetailedOutput, r.Success ? ConsoleColor.Green : ConsoleColor.Yellow);
@@ -380,13 +388,14 @@ public class GameEngine
             return;
         }
 
+        var labels = equippable.Select(i => $"{i.Name} ({i.ItemType})").ToList();
         var pick = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[cyan]Equip which item?[/]")
-                .AddChoices(equippable.Select(i => $"{i.Name} [{i.ItemType}]").Append(CancelLabel)));
+                .AddChoices(labels.Append(CancelLabel)));
         if (pick == CancelLabel) return;
 
-        var chosen = equippable.First(i => $"{i.Name} [{i.ItemType}]" == pick);
+        var chosen = equippable[labels.IndexOf(pick)];
         var result = _playerService.Equip(_player, chosen);
         _explorationUI.ShowMessage(result.DetailedOutput, ConsoleColor.Green);
     }
@@ -401,13 +410,14 @@ public class GameEngine
             return;
         }
 
+        var labels = equipped.Select(i => $"{i.Name} ({i.ItemType})").ToList();
         var pick = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[cyan]Unequip which item?[/]")
-                .AddChoices(equipped.Select(i => $"{i.Name} [{i.ItemType}]").Append(CancelLabel)));
+                .AddChoices(labels.Append(CancelLabel)));
         if (pick == CancelLabel) return;
 
-        var chosen = equipped.First(i => $"{i.Name} [{i.ItemType}]" == pick);
+        var chosen = equipped[labels.IndexOf(pick)];
         var result = _playerService.Unequip(_player, chosen);
         _explorationUI.ShowMessage(result.DetailedOutput, ConsoleColor.Green);
     }
@@ -432,6 +442,46 @@ public class GameEngine
 
         var result = _playerService.UseConsumable(_player, chosen);
         _explorationUI.ShowMessage(result.DetailedOutput, ConsoleColor.Green);
+    }
+
+    /// <summary>
+    /// Full inventory sub-screen. The exploration view shows only a compact
+    /// summary in the Character panel (to keep the layout from scrolling),
+    /// so this gives the player a way to see the per-item list on demand.
+    /// </summary>
+    private void HandleViewInventory()
+    {
+        if (_player == null) return;
+
+        AnsiConsole.Clear();
+        AnsiConsole.Write(new Rule($"[yellow bold]{Markup.Escape(_player.Name)}'s Inventory[/]").Centered());
+        AnsiConsole.WriteLine();
+
+        var equipped = _player.Equipment?.Items.ToList() ?? new();
+        var bag = _player.Inventory?.Items.ToList() ?? new();
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .AddColumn("[yellow]Where[/]")
+            .AddColumn("[yellow]Name[/]")
+            .AddColumn("[yellow]Type[/]")
+            .AddColumn("[yellow]Weight[/]");
+
+        foreach (var item in equipped)
+            table.AddRow("[green]equipped[/]", Markup.Escape(item.Name), item.ItemType, item.Weight.ToString());
+
+        foreach (var item in bag)
+            table.AddRow("[dim]bag[/]", Markup.Escape(item.Name), item.ItemType, item.Weight.ToString());
+
+        if (!equipped.Any() && !bag.Any())
+            AnsiConsole.MarkupLine("[dim]You are carrying nothing.[/]");
+        else
+            AnsiConsole.Write(table);
+
+        var bagMax = _player.Inventory?.MaxWeight ?? 0;
+        AnsiConsole.MarkupLine($"\n[dim]Carrying {_player.GetCurrentWeight()}/{bagMax} lbs[/]");
+        AnsiConsole.MarkupLine("[dim]Press any key to continue...[/]");
+        Console.ReadKey(true);
     }
 
     // ================================================================
@@ -460,7 +510,7 @@ public class GameEngine
         {
             var labels = chestsHere.Select(c =>
             {
-                var status = c.IsLocked ? "[LOCKED]" : c.Items.Any() ? "[OPEN]" : "[EMPTY]";
+                var status = c.IsLocked ? "(locked)" : c.Items.Any() ? "(open)" : "(empty)";
                 return $"{c.Description} {status}";
             }).ToList();
             var pick = AnsiConsole.Prompt(
@@ -588,6 +638,9 @@ public class GameEngine
                     "Find Item Location (LINQ)",
                     "Monster Census (LINQ GroupBy)",
 
+                    // Stretch goal - self-contained, no dependency on game state
+                    "Parser Demo (Stretch Goal)",
+
                     // Navigation
                     "Return to Exploration Mode",
                     "Quit"));
@@ -603,6 +656,7 @@ public class GameEngine
             "Display Character Abilities" => _adminService.DisplayCharacterAbilities(),
             "Find Item Location (LINQ)" => _adminService.FindItemLocation(),
             "Monster Census (LINQ GroupBy)" => _adminService.MonsterCensus(),
+            "Parser Demo (Stretch Goal)" => RunParserDemo(),
             _ => null
         };
 
@@ -623,6 +677,18 @@ public class GameEngine
 
         // Quit
         return TurnResult.Quit;
+    }
+
+    /// <summary>
+    /// Launches the self-contained parser demo (see ParserDemo/ParserDemo.cs).
+    /// Returns a ServiceResult so it slots into the admin dispatch table the
+    /// same way every other admin action does. The demo has its own REPL and
+    /// its own mock world - nothing it does affects the real game state.
+    /// </summary>
+    private ServiceResult RunParserDemo()
+    {
+        new ParserDemo.ParserDemo().Run();
+        return ServiceResult.Ok("Parser demo finished.");
     }
 
     private enum TurnResult { Continue, Quit }

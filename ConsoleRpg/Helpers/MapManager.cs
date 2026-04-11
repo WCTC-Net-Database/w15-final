@@ -114,8 +114,14 @@ public class MapManager
     }
 
     /// <summary>
-    /// Builds a small "player stats" panel showing name, HP, and a summary
-    /// of inventory/equipment.
+    /// Builds a combined "Character" panel with stats AND a compact inventory
+    /// summary. We merge these into one panel (rather than two stacked panels)
+    /// to keep the right column short enough that the action menu underneath
+    /// doesn't push the top of the layout off-screen when Spectre's
+    /// SelectionPrompt scrolls the cursor into view.
+    ///
+    /// The full per-item inventory is shown on demand via the "View Inventory"
+    /// menu action - this panel is the at-a-glance summary.
     /// </summary>
     public Panel BuildPlayerPanel(ConsoleRpgEntities.Models.Characters.Player? player)
     {
@@ -125,63 +131,38 @@ public class MapManager
         }
 
         var sb = new StringBuilder();
-        sb.AppendLine($"[bold]{EscapeMarkup(player.Name)}[/] (Lvl {player.Level})");
-        sb.AppendLine($"[green]HP:[/] {player.Health}  [yellow]XP:[/] {player.Experience}");
+        sb.AppendLine($"[bold]{EscapeMarkup(player.Name)}[/] (Lvl {player.Level})  [green]HP:[/] {player.Health}  [yellow]XP:[/] {player.Experience}");
         sb.AppendLine($"[yellow]Atk:[/] {player.GetTotalAttack()}  [blue]Def:[/] {player.GetTotalDefense()}");
 
-        var bagWeight = player.GetCurrentWeight();
-        var bagMax = player.Inventory?.MaxWeight ?? 0;
-        sb.AppendLine($"[dim]Bag:[/] {bagWeight}/{bagMax} lbs");
-
-        return Panel(new Markup(sb.ToString().TrimEnd()), "Character");
-    }
-
-    /// <summary>
-    /// Builds an inventory summary panel showing equipped items and backpack
-    /// contents at a glance. Designed to fit in the split-screen exploration
-    /// layout as a third right-column panel.
-    /// </summary>
-    public Panel BuildInventoryPanel(ConsoleRpgEntities.Models.Characters.Player? player)
-    {
-        if (player == null)
-        {
-            return Panel(new Markup("[red]No player.[/]"), "Inventory");
-        }
-
-        var sb = new StringBuilder();
-
-        // Equipped first (short, usually just weapon + armor)
-        sb.Append("[yellow]Equipped:[/] ");
+        // Equipped on one line
         var equipped = player.Equipment?.Items.ToList() ?? new();
-        if (equipped.Any())
-        {
-            sb.AppendLine(string.Join(", ", equipped.Select(i => EscapeMarkup(i.Name))));
-        }
-        else
-        {
-            sb.AppendLine("[dim](nothing)[/]");
-        }
+        sb.AppendLine(equipped.Any()
+            ? $"[yellow]Equipped:[/] {string.Join(", ", equipped.Select(i => EscapeMarkup(i.Name)))}"
+            : "[yellow]Equipped:[/] [dim](nothing)[/]");
 
-        // Backpack contents
+        // Bag summary on one line: counts by type + weight
         var bag = player.Inventory?.Items.ToList() ?? new();
+        var bagMax = player.Inventory?.MaxWeight ?? 0;
+        var bagWeight = player.GetCurrentWeight();
         if (bag.Any())
         {
-            sb.AppendLine("[yellow]Backpack:[/]");
-            foreach (var item in bag.Take(8))
-            {
-                sb.AppendLine($"  [dim]-[/] {EscapeMarkup(item.Name)}");
-            }
-            if (bag.Count > 8)
-            {
-                sb.AppendLine($"  [dim]... and {bag.Count - 8} more[/]");
-            }
+            var weapons = bag.OfType<ConsoleRpgEntities.Models.Containers.Weapon>().Count();
+            var armor = bag.OfType<ConsoleRpgEntities.Models.Containers.Armor>().Count();
+            var consumables = bag.OfType<ConsoleRpgEntities.Models.Containers.Consumable>().Count();
+            var keys = bag.OfType<ConsoleRpgEntities.Models.Containers.KeyItem>().Count();
+            var parts = new List<string>();
+            if (weapons > 0)     parts.Add($"{weapons} wpn");
+            if (armor > 0)       parts.Add($"{armor} arm");
+            if (consumables > 0) parts.Add($"{consumables} csm");
+            if (keys > 0)        parts.Add($"{keys} key");
+            sb.Append($"[yellow]Bag:[/] {bag.Count} items ({string.Join(", ", parts)}) · {bagWeight}/{bagMax} lbs");
         }
         else
         {
-            sb.AppendLine("[dim]Backpack is empty.[/]");
+            sb.Append($"[yellow]Bag:[/] [dim]empty[/] · {bagWeight}/{bagMax} lbs");
         }
 
-        return Panel(new Markup(sb.ToString().TrimEnd()), "Inventory");
+        return Panel(new Markup(sb.ToString()), "Character");
     }
 
     // ====================================================================
@@ -191,7 +172,7 @@ public class MapManager
     private static Panel Panel(IRenderable content, string header) =>
         new(content)
         {
-            Header = new PanelHeader($"[yellow]{header}[/]"),
+            Header = new PanelHeader($"[yellow]{EscapeMarkup(header)}[/]"),
             Border = BoxBorder.Rounded,
             Padding = new Padding(1, 0, 1, 0)
         };

@@ -49,6 +49,57 @@ public class PlayerService
     }
 
     /// <summary>
+    /// Returns the set of room IDs the player can currently "see" - i.e.
+    /// every room reachable from their current location without crossing
+    /// an undiscovered secret door. Used by the map renderer to hide rooms
+    /// behind secret doors until the player finds them via Inspect Room.
+    ///
+    /// Locked doors do NOT hide their destination - the player can see the
+    /// locked door (and the room beyond it) on the map, they just can't
+    /// pass through without a key. Only undiscovered secret doors hide,
+    /// because their whole point is that the player doesn't know they exist.
+    ///
+    /// Algorithm: breadth-first search from the start room, treating
+    /// undiscovered secret doors as walls. Anything not reached is hidden.
+    /// </summary>
+    public HashSet<int> GetVisibleRoomIds(int? startRoomId)
+    {
+        var visible = new HashSet<int>();
+        if (startRoomId == null) return visible;
+
+        var doors = _context.Doors.ToList();
+        var rooms = _context.Containers.OfType<Room>().ToList()
+            .ToDictionary(r => r.Id);
+
+        var queue = new Queue<int>();
+        queue.Enqueue(startRoomId.Value);
+        visible.Add(startRoomId.Value);
+
+        while (queue.Count > 0)
+        {
+            var currentId = queue.Dequeue();
+            if (!rooms.TryGetValue(currentId, out var room)) continue;
+
+            foreach (var nextId in new[] { room.NorthRoomId, room.SouthRoomId, room.EastRoomId, room.WestRoomId })
+            {
+                if (nextId == null || visible.Contains(nextId.Value)) continue;
+
+                // If a secret-undiscovered door sits on this edge, the player
+                // doesn't know the room beyond it exists - skip it.
+                var door = doors.FirstOrDefault(d =>
+                    (d.RoomAId == currentId && d.RoomBId == nextId.Value) ||
+                    (d.RoomAId == nextId.Value && d.RoomBId == currentId));
+                if (door != null && door.IsSecret && !door.IsDiscovered) continue;
+
+                visible.Add(nextId.Value);
+                queue.Enqueue(nextId.Value);
+            }
+        }
+
+        return visible;
+    }
+
+    /// <summary>
     /// Attempts to unlock a door using a key from the player's inventory.
     /// Thin wrapper around Player.TryUnlock that persists the change and
     /// returns a ServiceResult for the UI layer.
@@ -99,7 +150,9 @@ public class PlayerService
         if (door != null)
         {
             if (door.IsSecret && !door.IsDiscovered)
-                return ServiceResult<Room>.Fail("You can't go that way.");
+                return ServiceResult<Room>.Fail(
+                    "You can't see a way through, but something feels off about this wall. " +
+                    "Perhaps a careful search would reveal a hidden passage...");
 
             if (door.IsLocked)
                 return ServiceResult<Room>.Fail($"The {door.Name} is locked.");

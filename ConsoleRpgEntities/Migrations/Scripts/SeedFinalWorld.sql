@@ -29,7 +29,7 @@
 --                 (maze rooms loop around)
 --                         |
 --                  [Ironbound Door LOCKED]
---                  (requires dungeon-key)
+--                  (requires 'dungeon-main' key from Grubnak)
 --                         |
 --                 [Trapped Vault (11)]  <-- Rattlebones (Skeleton)
 --                         |
@@ -173,9 +173,12 @@ INSERT INTO Doors
      IsLocked, IsTrapped, IsPickable, RequiredKeyId,
      TrapDamage, TrapDisarmed, IsSecret, IsDiscovered)
 VALUES
-    -- Id 1: Ironbound Door - locked, requires the dungeon-key that Grubnak carries
+    -- Id 1: Ironbound Door - locked, requires the 'dungeon-main' key that
+    -- Grubnak carries (defined in W13's SeedWorldContent.sql). The same key
+    -- also opens the Ornate Chest in the Hidden Shrine - one key, two locks,
+    -- which gives the dungeon a tiny progression arc.
     (1, 'Ironbound Door', 10, 11,
-        1, 0, 0, 'dungeon-key',
+        1, 0, 0, 'dungeon-main',
         0, 0, 0, 0),
 
     -- Id 2: Marble Panel - secret door to the Hidden Shrine

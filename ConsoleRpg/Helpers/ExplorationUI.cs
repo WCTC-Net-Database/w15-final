@@ -52,10 +52,10 @@ public class ExplorationUI
         var mapPanel = _mapManager.BuildMapPanel(allRooms, currentRoom, allMonsters);
         var roomPanel = _mapManager.BuildRoomDetailsPanel(currentRoom, allMonsters, allChests);
         var playerPanel = _mapManager.BuildPlayerPanel(player);
-        var inventoryPanel = _mapManager.BuildInventoryPanel(player);
 
-        // Stack room details, player stats, and inventory in the right column.
-        var rightColumn = new Rows(roomPanel, playerPanel, inventoryPanel);
+        // Stack room details and the combined character/inventory panel in
+        // the right column. Inventory details are reachable via "View Inventory".
+        var rightColumn = new Rows(roomPanel, playerPanel);
 
         grid.AddRow(mapPanel, rightColumn);
         AnsiConsole.Write(grid);
@@ -68,7 +68,7 @@ public class ExplorationUI
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[cyan]What do you do?[/]")
-                .PageSize(14)
+                .PageSize(7)
                 .AddChoices(actions));
 
         return choice;
@@ -127,6 +127,7 @@ public class ExplorationUI
         if (hasConsumable) actions.Add("Use Consumable");
 
         // System actions
+        actions.Add("View Inventory");
         actions.Add("Inspect Room");
         actions.Add("Switch to Admin Mode");
         actions.Add("Quit");
