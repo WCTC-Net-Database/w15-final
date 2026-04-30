@@ -143,13 +143,15 @@ ConsoleRpgFinal.sln
     │   ├── Containers/                    # W12 hierarchy + W13 + W14
     │   │   ├── IItemContainer.cs
     │   │   ├── ILockable.cs
+    │   │   ├── SlotType.cs                # W13 - equipment slot enum
+    │   │   ├── EquipmentSlot.cs           # W13 - per-slot row owned by Equipment
     │   │   ├── Container.cs
     │   │   ├── Inventory.cs
-    │   │   ├── Equipment.cs
+    │   │   ├── Equipment.cs               # W13 - has EquipmentSlots collection
     │   │   ├── Chest.cs
     │   │   ├── MonsterLoot.cs
     │   │   ├── Room.cs
-    │   │   ├── Item.cs
+    │   │   ├── Item.cs                    # W13 - has EligibleSlot column
     │   │   ├── Weapon.cs / Armor.cs / Consumable.cs / KeyItem.cs
     │   ├── World/
     │   │   └── Door.cs                    # W14 lockable door
@@ -167,6 +169,7 @@ ConsoleRpgFinal.sln
         ├── AddMonsterTypes (W15 - Wolf/Skeleton columns)
         ├── AddChestLocation (W15 - Chest.LocationRoomId for placement)
         ├── SeedFinalWorld (W15)
+        ├── AddEquipmentSlots (W13 slot system)
         └── Scripts/
             ├── SeedInitialData.sql        # W12
             ├── SeedWorldContent.sql       # W13
@@ -224,7 +227,7 @@ From the solution directory:
 dotnet ef database update --project ConsoleRpgEntities --startup-project ConsoleRpg
 ```
 
-This applies eight migrations in order, ending with `SeedFinalWorld` which populates your world. If you ever want a fresh start, run:
+This applies nine migrations in order, ending with `AddEquipmentSlots` which carries the slot system forward. If you ever want a fresh start, run:
 
 ```bash
 dotnet ef database update 0 --project ConsoleRpgEntities --startup-project ConsoleRpg
