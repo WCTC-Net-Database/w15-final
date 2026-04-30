@@ -35,6 +35,9 @@ public class GameContext : DbContext
     public DbSet<Container> Containers { get; set; }
     public DbSet<Item> Items { get; set; }
 
+    // New in Week 13 (entity approach to equipment slots)
+    public DbSet<EquipmentSlot> EquipmentSlots { get; set; }
+
     // New in Week 14
     public DbSet<Door> Doors { get; set; }
 
@@ -132,6 +135,21 @@ public class GameContext : DbContext
             .WithMany()
             .HasForeignKey(m => m.LootId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ============================================
+        // EquipmentSlot relationships (NEW in Week 13)
+        // ============================================
+        modelBuilder.Entity<EquipmentSlot>()
+            .HasOne(s => s.Equipment)
+            .WithMany(e => e.EquipmentSlots)
+            .HasForeignKey(s => s.EquipmentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<EquipmentSlot>()
+            .HasOne(s => s.EquippedItem)
+            .WithMany()
+            .HasForeignKey(s => s.EquippedItemId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // ============================================
         // Chest -> Room (NEW in Week 15)

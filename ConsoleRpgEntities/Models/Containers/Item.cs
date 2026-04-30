@@ -60,4 +60,11 @@ public abstract class Item
     /// </summary>
     public int? ContainerId { get; set; }
     public virtual Container? Container { get; set; }
+
+    /// <summary>
+    /// Which equipment slot this item occupies when equipped, or null for
+    /// items that can't be equipped at all (Consumables, KeyItems).
+    /// Real DB column - set per-instance in seed data.
+    /// </summary>
+    public SlotType? EligibleSlot { get; set; }
 }

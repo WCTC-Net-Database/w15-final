@@ -1,16 +1,24 @@
 namespace ConsoleRpgEntities.Models.Containers;
 
 /// <summary>
-/// Equipment - A player's equipped item slots (weapon, armor, etc.).
+/// Equipment - A character's set of wearable slots (Head, Body, Weapon, etc.).
 ///
-/// This is a Container subclass - all equipped items live in the same Items table
-/// with ContainerId pointing at this Equipment row. Querying "what's equipped" is:
+/// Equipment is a Container (so equipped items still live in the Items table
+/// via ContainerId pointing here), AND it owns a set of <see cref="EquipmentSlot"/>
+/// rows that record which item is in which slot. The collection-of-slots design
+/// lets us enforce "one item per slot" cleanly in <see cref="Characters.Player.Equip"/>.
+///
+/// Querying still works through the flat collection:
 ///
 ///     var weapon = player.Equipment.Items.OfType&lt;Weapon&gt;().FirstOrDefault();
-///     var armor  = player.Equipment.Items.OfType&lt;Armor&gt;().FirstOrDefault();
 ///
-/// This is much simpler than Week 11's separate WeaponId/ArmorId foreign keys.
+/// Or via the slots if you want slot-aware access:
+///
+///     var weaponSlot = player.Equipment.EquipmentSlots
+///         .FirstOrDefault(s => s.SlotType == SlotType.Weapon);
+///     var weapon = weaponSlot?.EquippedItem as Weapon;
 /// </summary>
 public class Equipment : Container
 {
+    public virtual ICollection<EquipmentSlot> EquipmentSlots { get; set; } = new List<EquipmentSlot>();
 }
