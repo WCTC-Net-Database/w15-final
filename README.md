@@ -251,7 +251,16 @@ Start by wandering around Town Square and surrounding rooms. Check the admin men
 
 ## Grading Rubric
 
-The rubric is intentionally tiered so students at different levels can succeed. Everything in the **Base** tier should feel familiar from previous weeks — it's "can you run the world and read the code you've been building all semester?"
+This assignment is worth **500 points** total, with up to **+50 bonus** available via the stretch goal. The rubric is intentionally tiered so students at different levels can succeed.
+
+| Tier | Points | What it requires |
+|------|--------|------------------|
+| Base | up to **375** | Run, explore, explain |
+| B    | up to **425** | + 2+ LINQ queries |
+| A    | up to **475** | + 1 architecture extension (new entity + migration) |
+| A+   | up to **500** | + creative addition |
+| Stretch (parser port) | **+50** bonus, max **550** | Replace the menu UI with a working text parser |
+| **No `CONTRIBUTIONS.md`** | capped at **250** | 50% cap regardless of code quality |
 
 ### Required for ALL Tiers: `CONTRIBUTIONS.md`
 
@@ -262,11 +271,11 @@ Every submission must include a completed `CONTRIBUTIONS.md` at the repo root, f
 3. What you used from the template / AI / other sources, with attribution
 4. A brief reflection (hardest part, what you'd do next)
 
-**Without `CONTRIBUTIONS.md`, the project caps at 50% regardless of code quality.** Using template code with clear attribution is fine and earns full credit; claiming to have written code you didn't is not. During your final presentation I may ask you to walk through any file you describe as "added" or "modified" — be ready.
+**Without `CONTRIBUTIONS.md`, the project caps at 250 points (50% of full credit) regardless of code quality.** Using template code with clear attribution is fine and earns full credit; claiming to have written code you didn't is not. During your final presentation I may ask you to walk through any file you describe as "added" or "modified" — be ready.
 
 This file is the gate, not a grade penalty. Filling it out honestly takes 15 minutes and protects everyone — students who did the work get clearly credited for it, and students who used the template heavily get evaluated on what they actually contributed instead of what's already in the codebase.
 
-### Base Tier (up to 75 points)
+### Base Tier (up to 375 points)
 
 This tier is **comprehension + exploration**. You should be able to:
 
@@ -284,7 +293,7 @@ This tier is **comprehension + exploration**. You should be able to:
 
 **Everything at this tier is already working in the template.** You do not need to write code — you need to understand it, use it, and be able to discuss it during your final presentation.
 
-### B Tier (up to 85 points)
+### B Tier (up to 425 points)
 
 Add **LINQ queries that answer new questions** about the world. Pick at least TWO of the following and implement them as new methods on `AdminService`:
 
@@ -296,7 +305,7 @@ Add **LINQ queries that answer new questions** about the world. Pick at least TW
 
 Wire each new method into the Admin menu so it's callable at runtime.
 
-### A Tier (up to 95 points)
+### A Tier (up to 475 points)
 
 All of the B-tier work, PLUS a **small architecture extension** that requires a new class and a migration. Pick ONE:
 
@@ -305,7 +314,7 @@ All of the B-tier work, PLUS a **small architecture extension** that requires a 
 - [ ] **Add a new Item type** (e.g. `Scroll`, `Ring`, `Rune`) with subclass-specific behavior. Wire it into `Player.UseItem` or a new method.
 - [ ] **Add a new ILockable entity** (e.g. a `LockedJournal`, a `MagicPortal`) that reuses `Player.TryUnlock` without modification. This is the Liskov Substitution payoff: your unlock code should work on it with zero changes.
 
-### A+ Tier (up to 100 points) — Be Creative
+### A+ Tier (up to 500 points) — Be Creative
 
 Do all of A tier, PLUS show real creativity. Some ideas (not an exhaustive list):
 
@@ -315,10 +324,15 @@ Do all of A tier, PLUS show real creativity. Some ideas (not an exhaustive list)
 - [ ] **Add a combat abilities upgrade** — buff the existing ShoveAbility with new levels, or add a second ability like `Fireball` or `Heal`
 - [ ] **Add save/load slots** so the player can roll back to a previous state
 - [ ] **Improve the map rendering** — color-code rooms by biome, add a true "fog of war" where rooms you haven't visited yet are hidden (the template already hides rooms behind undiscovered secret doors — extend that to all unvisited rooms)
-- [ ] **Port the Parser Demo to drive the real game.** Replace the SelectionPrompt menu with a Zork-style command line backed by `GameContext`. See [Parser Demo](#parser-demo-stretch-goal) below — the demo gives you a complete reference to copy from.
 - [ ] **Take it somewhere we haven't seen** — a previous student built a WPF frontend for their ConsoleRPG. The data model is yours to play with.
 
 The A+ tier is worth showing off in your final presentation, so pick something you'll enjoy demonstrating.
+
+### Stretch Goal (+50 bonus, max 550)
+
+**Port the Parser Demo to drive the real game.** Replace the SelectionPrompt menu with a Zork-style command line backed by `GameContext`. This is a separate, ambitious extension that goes above the standard 500 — full credit on the rest of your project does NOT require this, but landing it is a significant accomplishment.
+
+See the [Parser Demo](#parser-demo-stretch-goal) section below — the demo in `ConsoleRpg/ParserDemo/ParserDemo.cs` gives you a complete reference to copy from, and the doc-comment block at the top lists the concrete porting steps.
 
 ---
 
@@ -342,9 +356,9 @@ Two ideas, both directly applicable to the real game:
 
 The W15 rubric uses Spectre.Console SelectionPrompt menus because menus are accessible — you can play the game without first solving the parsing problem. The parser demo exists for students who want to learn how text input works and have a complete, readable reference to study.
 
-### How to use it for the A+ tier
+### How to earn the +50 stretch bonus
 
-The hardest extension idea in the A+ list is **"port the parser to drive the real game."** Concretely, that means:
+The stretch goal — **"port the parser to drive the real game"** — sits above the 500-point standard rubric and is worth +50 bonus. Concretely, that means:
 
 - Replace `MockWorld` with `GameContext` + `Player.CurrentRoom`
 - Replace `MockItem` with the existing `Item` TPH (`Weapon`, `Armor`, `Consumable`, `KeyItem`)
