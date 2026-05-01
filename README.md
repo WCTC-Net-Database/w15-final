@@ -109,6 +109,8 @@ This template preserves the two-project architecture you've been using since Wee
 
 ```
 ConsoleRpgFinal.sln
+README.md
+CONTRIBUTIONS.md                            # REQUIRED: your honest summary
 │
 ├── ConsoleRpg/                            # UI, services, game loop
 │   ├── Program.cs
@@ -250,6 +252,19 @@ Start by wandering around Town Square and surrounding rooms. Check the admin men
 ## Grading Rubric
 
 The rubric is intentionally tiered so students at different levels can succeed. Everything in the **Base** tier should feel familiar from previous weeks — it's "can you run the world and read the code you've been building all semester?"
+
+### Required for ALL Tiers: `CONTRIBUTIONS.md`
+
+Every submission must include a completed `CONTRIBUTIONS.md` at the repo root, following the template provided in this directory. The file is a one-paragraph-per-section honest accounting of:
+
+1. Where you started (your own W14 repo, the W15 template, or a hybrid)
+2. What you added on top of that starting point
+3. What you used from the template / AI / other sources, with attribution
+4. A brief reflection (hardest part, what you'd do next)
+
+**Without `CONTRIBUTIONS.md`, the project caps at 50% regardless of code quality.** Using template code with clear attribution is fine and earns full credit; claiming to have written code you didn't is not. During your final presentation I may ask you to walk through any file you describe as "added" or "modified" — be ready.
+
+This file is the gate, not a grade penalty. Filling it out honestly takes 15 minutes and protects everyone — students who did the work get clearly credited for it, and students who used the template heavily get evaluated on what they actually contributed instead of what's already in the codebase.
 
 ### Base Tier (up to 75 points)
 
@@ -402,10 +417,11 @@ var unopenable = _context.Containers
 
 ## Submission
 
-1. Commit your changes with meaningful messages throughout the project
-2. Push to your GitHub Classroom repository
-3. Submit the repository URL in Canvas
-4. Be ready to present on the final day
+1. **Fill in `CONTRIBUTIONS.md` at the repo root** (required — see Grading Rubric above)
+2. Commit your changes with meaningful messages throughout the project
+3. Push to your GitHub Classroom repository
+4. Submit the repository URL in Canvas
+5. Be ready to present on the final day
 
 ---
 
