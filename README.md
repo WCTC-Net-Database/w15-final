@@ -264,16 +264,20 @@ This assignment is worth **500 points** total, with up to **+50 bonus** availabl
 
 ### Required for ALL Tiers: `CONTRIBUTIONS.md`
 
-Every submission must include a completed `CONTRIBUTIONS.md` at the repo root, following the template provided in this directory. The file is a one-paragraph-per-section honest accounting of:
+Every submission must include a completed `CONTRIBUTIONS.md` at the repo root, following the template provided in this directory. It has two parts:
 
+**Sections 1-4 (graded — the gate to all tiers):**
 1. Where you started (your own W14 repo, the W15 template, or a hybrid)
 2. What you added on top of that starting point
 3. What you used from the template / AI / other sources, with attribution
-4. A brief reflection (hardest part, what you'd do next)
+4. A brief reflection on the project (hardest part, what you'd do next)
 
-**Without `CONTRIBUTIONS.md`, the project caps at 250 points (50% of full credit) regardless of code quality.** Using template code with clear attribution is fine and earns full credit; claiming to have written code you didn't is not. During your final presentation I may ask you to walk through any file you describe as "added" or "modified" — be ready.
+**Section 5 (NOT graded — honest course feedback):**
+A short feedback form covering what you learned, what worked, what didn't, surprises, hardest parts of the semester, what to add or remove from next year's version, and anything else you want me to know. I read this AFTER grades are submitted and use it to revise the course content. A blank or critical answer doesn't affect your grade; the only "wrong" answer is a fake one.
 
-This file is the gate, not a grade penalty. Filling it out honestly takes 15 minutes and protects everyone — students who did the work get clearly credited for it, and students who used the template heavily get evaluated on what they actually contributed instead of what's already in the codebase.
+**Without Sections 1-4, the project caps at 250 points (50% of full credit) regardless of code quality.** Using template code with clear attribution is fine and earns full credit; claiming to have written code you didn't is not. During your final presentation I may ask you to walk through any file you describe as "added" or "modified" — be ready.
+
+The file is the gate, not a grade penalty. Filling out the graded sections honestly takes 15 minutes and protects everyone — students who did the work get clearly credited for it, and students who used the template heavily get evaluated on what they actually contributed instead of what's already in the codebase. The feedback section is just a chance to tell me how to make this better next year.
 
 ### Base Tier (up to 375 points)
 

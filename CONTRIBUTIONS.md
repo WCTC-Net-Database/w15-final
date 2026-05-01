@@ -51,10 +51,11 @@ Pretending you wrote something you didn't is not.]
 
 ---
 
-## 4. Reflection (one paragraph)
+## 4. Reflection on This Project (one paragraph)
 
-[Hardest part of the project? What would you build if you had another week?
-What did you learn that surprised you?]
+[Hardest part of building YOUR W15 project specifically? What would you
+build NEXT on top of it if you had another week? Save the broader
+semester reflection for Section 5.]
 
 > **Example:** *"The hardest part was figuring out why my Shop migration
 > kept breaking — I'd forgotten to add the discriminator value in
@@ -65,19 +66,63 @@ What did you learn that surprised you?]
 
 ---
 
+## 5. Course Feedback (NOT graded — please be candid)
+
+Help me make this class better next time. **This section is not part of
+your project grade.** I read it after grades are submitted, and I'd much
+rather hear "week X was painful because Y" than diplomatic non-answers.
+Concrete > polite.
+
+**What did you learn that genuinely stuck with you?**
+[One specific concept or skill — be concrete. "TPH" is fine; "`OfType<T>()`
+finally clicked when I had to filter loot drops" is better.]
+
+**What did you like about the course?**
+[Pacing, projects, format, in-class examples, READMEs, anything.]
+
+**What didn't work for you?**
+[What was confusing, slow, repetitive, or disconnected from the rest of
+the work? Be specific so I can actually fix it.]
+
+**What surprised you?**
+[Something you expected to be easy but wasn't, or vice versa. Or a moment
+where a concept clicked unexpectedly.]
+
+**What was the hardest part of the semester (not just this project)?**
+[A particular week, concept, debugging session, or assignment. Why?]
+
+**What would you ADD to next year's version?**
+[A topic, a tool, more practice on something, a guest speaker, anything.]
+
+**What would you REMOVE or shorten?**
+[Anything that felt like filler, redundant, or off-topic from your
+perspective. Honest answers help — I literally rewrite the rubric and
+materials each year based on this section.]
+
+**Anything else?**
+[Open-ended. Wins, frustrations, advice you'd give future students,
+requests, or just a sentence about your overall experience.]
+
+---
+
 ## How this is graded
 
-This file is the **gate to all rubric tiers.** Without it, the project
-caps at 50% regardless of code quality. With it:
+**Sections 1-4** are the **gate to all rubric tiers.** Without a complete
+and honest accounting of your starting point, additions, sources, and
+project reflection, the project caps at 50% regardless of code quality.
 
-- **Base/B/A/A+** all require a complete, honest CONTRIBUTIONS.md that
-  matches what's actually in your repo.
+- **Base/B/A/A+** all require Sections 1-4 to be filled out and to match
+  what's actually in your repo.
 - During your final presentation I may ask you to walk through any file
   you describe yourself as "added" or "modified" — be ready.
 - Using template code with clear attribution is fine and earns full credit.
   Claiming to have written code you didn't is not, and will be graded
   as such (zero on the affected tier).
 
-Think of this as the README every PR needs: a short story about what
-changed and why. It's a real engineering skill, and it's the most reliable
-way for me to grade what you actually did.
+**Section 5 is not graded.** It exists to make the class better. A blank
+Section 5 won't lower your grade; an honest critical Section 5 won't
+either. The only "wrong" answer there is a fake one.
+
+Think of Sections 1-4 as the README every PR needs: a short story about
+what changed and why. It's a real engineering skill, and it's the most
+reliable way for me to grade what you actually did.
