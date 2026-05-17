@@ -62,7 +62,7 @@ namespace ConsoleRpgEntities.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Abilities");
+                    b.ToTable("Abilities", (string)null);
 
                     b.HasDiscriminator<string>("AbilityType").HasValue("Ability");
 
@@ -107,7 +107,7 @@ namespace ConsoleRpgEntities.Migrations
 
                     b.HasIndex("LootId");
 
-                    b.ToTable("Monsters");
+                    b.ToTable("Monsters", (string)null);
 
                     b.HasDiscriminator<string>("MonsterType").HasValue("Monster");
 
@@ -152,7 +152,7 @@ namespace ConsoleRpgEntities.Migrations
 
                     b.HasIndex("InventoryId");
 
-                    b.ToTable("Players");
+                    b.ToTable("Players", (string)null);
                 });
 
             modelBuilder.Entity("ConsoleRpgEntities.Models.Containers.Container", b =>
@@ -170,7 +170,7 @@ namespace ConsoleRpgEntities.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Containers");
+                    b.ToTable("Containers", (string)null);
 
                     b.HasDiscriminator<string>("ContainerType").HasValue("Container");
 
@@ -200,7 +200,7 @@ namespace ConsoleRpgEntities.Migrations
 
                     b.HasIndex("EquippedItemId");
 
-                    b.ToTable("EquipmentSlots");
+                    b.ToTable("EquipmentSlots", (string)null);
                 });
 
             modelBuilder.Entity("ConsoleRpgEntities.Models.Containers.Item", b =>
@@ -240,7 +240,7 @@ namespace ConsoleRpgEntities.Migrations
 
                     b.HasIndex("ContainerId");
 
-                    b.ToTable("Items");
+                    b.ToTable("Items", (string)null);
 
                     b.HasDiscriminator<string>("ItemType").HasValue("Item");
 
@@ -295,7 +295,7 @@ namespace ConsoleRpgEntities.Migrations
 
                     b.HasIndex("RoomBId");
 
-                    b.ToTable("Doors");
+                    b.ToTable("Doors", (string)null);
                 });
 
             modelBuilder.Entity("ConsoleRpgEntities.Models.Abilities.PlayerAbilities.ShoveAbility", b =>
@@ -437,7 +437,7 @@ namespace ConsoleRpgEntities.Migrations
 
                     b.HasIndex("WestRoomId");
 
-                    b.ToTable("Containers", t =>
+                    b.ToTable("Containers", null, t =>
                         {
                             t.Property("Description")
                                 .HasColumnName("Room_Description");

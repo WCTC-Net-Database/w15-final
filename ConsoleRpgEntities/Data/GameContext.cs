@@ -164,6 +164,26 @@ public class GameContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         // ============================================
+        // Pin Room.Description -> "Room_Description" column (NEW in Week 14)
+        // ============================================
+        // Both Chest and Room are Container subclasses, and BOTH define a
+        // string Description property. EF Core auto-disambiguates by giving
+        // one of them a renamed column ("Room_Description"). The auto-pick
+        // is deterministic in any given EF Core version, but it can drift
+        // when a student later adds another TPH subclass (e.g., a new
+        // Monster type) - EF Core re-evaluates the whole model and can
+        // unexpectedly think the rename should be reversed, producing a
+        // confusing "DropColumn Room_Description" migration that has
+        // nothing to do with the student's intended change.
+        //
+        // Pinning the column name explicitly here makes the mapping
+        // immune to that drift. The seed SQL already uses Room_Description
+        // (see Migrations/Scripts/SeedFinalWorld.sql).
+        modelBuilder.Entity<Room>()
+            .Property(r => r.Description)
+            .HasColumnName("Room_Description");
+
+        // ============================================
         // Room self-referencing navigation (NEW in Week 14)
         // ============================================
         // Each room points to at most one other Room in each cardinal direction.
